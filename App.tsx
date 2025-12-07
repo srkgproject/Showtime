@@ -187,7 +187,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </Link>
         </div>
 
-        <div className="flex-1 max-w-xl mx-4 relative hidden md:block mt-6">
+        <div className="flex-1 max-w-xl mx-4 relative hidden md:block mt-5">
             <form ref={searchRef} onSubmit={handleSearch} className="relative group w-full">
                 <input 
                   type="text" 
@@ -426,6 +426,49 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 // --- PAGES ---
+
+const ViewAllPage: React.FC = () => {
+    const [searchParams] = useSearchParams();
+    const type = searchParams.get('type') as MovieType;
+    const { movies, toggleWatchlist, user } = useContext(AppContext);
+    const navigate = useNavigate();
+
+    const filtered = useMemo(() => {
+        if (!type) return movies;
+        return movies.filter(m => m.type === type);
+    }, [movies, type]);
+
+    const titleMap: Record<string, string> = {
+        [MovieType.NOW_SHOWING]: "Now In Theatres",
+        [MovieType.OTT]: "Showtime Originals",
+        [MovieType.UPCOMING]: "Coming Soon"
+    };
+
+    return (
+        <div className="space-y-8 animate-fade-in">
+             <div className="flex justify-between items-center">
+                 <h1 className="text-3xl font-bold border-l-4 border-brand-red pl-3">{titleMap[type] || "All Movies"}</h1>
+             </div>
+             {filtered.length > 0 ? (
+                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                     {filtered.map(m => (
+                         <MovieCard 
+                            key={m.id} 
+                            movie={m} 
+                            onClick={() => navigate(`/movie/${m.id}`)}
+                            onToggleWatchlist={(e) => { e.stopPropagation(); toggleWatchlist(m.id); }}
+                            isInWatchlist={user?.watchlist.includes(m.id)}
+                            badge={type === MovieType.UPCOMING ? m.releaseDate : undefined}
+                         />
+                     ))}
+                 </div>
+             ) : (
+                 <div className="text-center py-20 text-gray-500">No movies found in this category.</div>
+             )}
+        </div>
+    );
+};
+
 
 const CreatorDashboardPage: React.FC = () => {
     const { user, movies, addMovie, showToast } = useContext(AppContext);
@@ -1470,7 +1513,7 @@ const HomePage: React.FC = () => {
             <section>
                 <div className="flex justify-between items-end mb-6">
                     <h2 className="text-2xl font-bold border-l-4 border-brand-red pl-3">Now In Theatres</h2>
-                    <Link to="/search?type=theatre" className="text-sm text-brand-red font-bold hover:underline">View All</Link>
+                    <Link to="/view-all?type=NOW_SHOWING" className="text-sm text-brand-red font-bold hover:underline">View All</Link>
                 </div>
                 <HorizontalScrollContainer>
                     {loadingContent 
@@ -1485,7 +1528,7 @@ const HomePage: React.FC = () => {
             <section>
                 <div className="flex justify-between items-end mb-6">
                     <h2 className="text-2xl font-bold border-l-4 border-blue-500 pl-3">Showtime Originals</h2>
-                    <Link to="/search?type=ott" className="text-sm text-blue-500 font-bold hover:underline">View All</Link>
+                    <Link to="/view-all?type=OTT" className="text-sm text-blue-500 font-bold hover:underline">View All</Link>
                 </div>
                 <HorizontalScrollContainer>
                     {loadingContent
@@ -1498,7 +1541,10 @@ const HomePage: React.FC = () => {
             </section>
 
             <section>
-                <h2 className="text-2xl font-bold mb-6 border-l-4 border-gray-500 pl-3">Coming Soon</h2>
+                <div className="flex justify-between items-end mb-6">
+                    <h2 className="text-2xl font-bold border-l-4 border-gray-500 pl-3">Coming Soon</h2>
+                    <Link to="/view-all?type=UPCOMING" className="text-sm text-gray-400 font-bold hover:underline">View All</Link>
+                </div>
                 <HorizontalScrollContainer>
                     {loadingContent
                         ? [1,2,3,4,5].map(i => <MovieCardSkeleton key={i} />)
@@ -1708,6 +1754,7 @@ const App: React.FC = () => {
                         <Route path="/register" element={<AuthPage />} />
                         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                         <Route path="/search" element={<SearchPage />} />
+                        <Route path="/view-all" element={<ViewAllPage />} />
                         <Route path="/book/:id" element={<BookingPage />} />
                         <Route path="/movie/:id" element={<MovieDetailsPage />} />
                         <Route path="/bookings" element={<BookingsPage />} />
